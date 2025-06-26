@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Client Viewer</title>
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    body {
+      background: #0e0e0e;
+      color: #f0f0f0;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 30px;
+      background: #1a1a1a;
+      border-radius: 10px;
+      box-shadow: 0 0 12px rgba(0, 255, 180, 0.12);
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+      color: #00ffc3;
+    }
+
+    input[type="text"] {
+      width: 60%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      border: none;
+      font-size: 1rem;
+      outline: none;
+      background: #222;
+      color: #fff;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-bottom: 20px;
+      font-size: 1rem;
+      background: #00ffc3;
+      border: none;
+      border-radius: 6px;
+      color: #000;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #00cc99;
+    }
+
+    video {
+      width: 100%;
+      max-height: 500px;
+      margin-top: 20px;
+      border: 2px solid #444;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="controls">
+      <h2>🎥 Remote Viewer</h2>
+      <input type="text" id="host-id" placeholder="Enter Host ID" />
+      <br />
+      <button onclick="connectToHost()">Connect</button>
+    </div>
+    <div id="connectionstart">
+      <video id="remote" autoplay playsinline></video>
+      <button onclick="toggleFullscreen()">Fullscreen</button>
+    </div>
+  </div>
+
+  <script>
+    function toggleFullscreen() {
+      const video = document.getElementById('remote');
+      if (!document.fullscreenElement) {
+        video.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    const peer = new Peer(undefined, {
+      config: {
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      }
+    });
+
+    let conn;
+
+    function connectToHost() {
+      const hostId = document.getElementById('host-id').value;
+      conn = peer.connect(hostId);
+
+      conn.on('open', () => {
+        document.addEventListener('click', e => {
+          conn.send({ type: 'mouse', x: e.clientX, y: e.clientY });
+        });
+
+        document.addEventListener('keydown', e => {
+          conn.send({ type: 'key', key: e.key });
+        });
+      });
+
+      peer.on('call', call => {
+        call.answer();
+        call.on('stream', stream => {
+          document.getElementById('remote').srcObject = stream;
+          document.getElementById('controls').style.display = 'none';
+          document.getElementById('conectionstart').style.display = 'inline-block';
+        });
+      });
+    }
+  </script>
+</body>
+</html>
